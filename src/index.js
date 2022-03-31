@@ -7,7 +7,7 @@ const { generateMessage, generateLocationMessage } = require("./utils/messages")
 const app = express();
 const server = http.createServer(app)
 const io = socketio(server)
-
+const {addUser, removeUser, getUser, getUsersInRoom} = require("./utils/users")
 const port = process.env.PORT || "3000"
 const publicDirectoryPath = path.join(__dirname, "../public")
 
@@ -19,28 +19,58 @@ io.on('connection', (socket) =>{
     console.log("New WebSocket Connection")
 
     //socket.emit('countUpdated', count)
-    socket.emit('message', generateMessage("Welcome!"))
-    socket.broadcast.emit("message", generateMessage("A new user has joined!"))
+    
+
+    socket.on('join', (options, callback) => {
+        const {error, user} = addUser({id: socket.id, ...options})
+        if(error){
+            return callback(error)
+        }
+        socket.join(user.room)
+        
+        socket.emit('message', generateMessage("Admin","Welcome!"))
+        socket.broadcast.to(user.room).emit("message", generateMessage("Admin", `${user.username} has joined`))
+        io.to(user.room).emit('roomData', {
+            room: user.room,
+            users: getUsersInRoom(user.room)
+        })
+        callback()
+    })
     socket.on('increment', () =>{
         count++;
         //socket.emit('countUpdated', count)
         io.emit('countUpdated', count)
     })
     socket.on('sendMessage', (msg, callback)=>{
-        //console.log(msg)
+        const user = getUser(socket.id);
+        if(user){
          const filter = new Filter()
          if(filter.isProfane(msg)){
             return callback("Profanity is not allowed")
          }
-         io.emit('message', generateMessage(msg))
+         io.to(user.room).emit('message', generateMessage(user.username, msg))
          callback('Delivered!')
+        }
     })
     socket.on("disconnect", ()=>{
-        io.emit('message', generateMessage("A user has left!"))
+        const user = removeUser(socket.id)
+
+        if(user){
+            io.to(user.room).emit('message', generateMessage(`${user.username} has left!`))
+            io.to(user.room).emit('roomData', {
+                room: user.room,
+                users: getUsersInRoom(user.room)
+            })
+        }
+      
     })
     socket.on("sendLocation", (pos, callback)=>{
-        io.emit('locationMessage', generateLocationMessage(`https://google.com/maps?q=${pos.latitude},${pos.longitude}`))
+        const user = getUser(socket.id)
+        if(user){
+        io.to(user.room).emit('locationMessage', generateLocationMessage(user.username, `https://google.com/maps?q=${pos.latitude},${pos.longitude}`))
         callback("Location Shared")
+        }
+        
     })
 })
 server.listen(port, ()=> {
