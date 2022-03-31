@@ -58,6 +58,30 @@ document.getElementById("sendLocation").addEventListener("click", (e) => {
 
     })
 }) 
+const autoscroll = () =>{
+   
+    const $newMessage = $messages.lastElementChild
+
+
+    //Height of the Last Message 
+    const newMessagesStyles = getComputedStyle($newMessage)
+    const newMessageMargin = parseInt(newMessagesStyles.marginBottom)
+    const newMessageHeight = $newMessage.offsetHeight + newMessageMargin
+    
+    //Visisble Height
+    const visibleHeight = $messages.offsetHeight
+
+    //Height of Message Container
+    const containerHeight = $messages.scrollHeight
+
+    //How far have I scrolled
+    const scrollOffset = $messages.scrollTop + visibleHeight;
+
+    if(containerHeight - newMessageHeight <= scrollOffset) {
+        $messages.scrollTop = $messages.scrollHeight
+    }
+    console.log(newMessagesStyles)
+}
 
 socket.on('message', (msg) =>{
     const message = msg.text
@@ -69,6 +93,7 @@ socket.on('message', (msg) =>{
         createdAt
     })
     $messages.insertAdjacentHTML('beforeend', html)
+    autoscroll()
 })
 
 socket.on('locationMessage', (location) =>{
@@ -79,6 +104,7 @@ socket.on('locationMessage', (location) =>{
         createdAt: moment(location.createdAt).format(" h:MM A")
     })
     $messages.insertAdjacentHTML('beforeend', html)
+    autoscroll()
 })
 
 socket.on('roomData', (roomData) =>{
