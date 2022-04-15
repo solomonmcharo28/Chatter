@@ -1,3 +1,3 @@
 # Chatter
 Chat App
-https://soloandglenn-chatappapi.herokuapp.com
+https://solo-chatroomapi.herokuapp.com
